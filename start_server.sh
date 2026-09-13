@@ -15,13 +15,13 @@ export PYTHONPATH="${LONGCAT_REPO_DIR}:${PYTHONPATH:-}"
 
 mkdir -p /workspace/models /workspace/hf-cache /var/log/longcat
 
-if ! command -v python3 >/dev/null 2>&1; then
-  apt-get update
-  apt-get install -y --no-install-recommends python3.10 python3.10-dev python3-pip python-is-python3
-fi
-
+# Install bootstrap/runtime packages unconditionally. The CUDA base image is minimal
+# and may not include python, pip, git, curl or ffmpeg.
 apt-get update
-apt-get install -y --no-install-recommends git ffmpeg build-essential ninja-build libgl1 libglib2.0-0 curl ca-certificates
+apt-get install -y --no-install-recommends \
+  python3.10 python3.10-dev python3-pip python-is-python3 \
+  git curl ca-certificates ffmpeg build-essential ninja-build \
+  libgl1 libglib2.0-0
 rm -rf /var/lib/apt/lists/*
 
 python -m pip install --upgrade pip setuptools wheel packaging ninja psutil
