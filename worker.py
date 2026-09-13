@@ -8,14 +8,21 @@ MODEL_SERVER_PORT = int(os.getenv("MODEL_SERVER_PORT", "18000"))
 MODEL_LOG_FILE = os.getenv("MODEL_LOG_FILE", "/var/log/longcat/model.log")
 
 
+def _job(payload: dict) -> dict:
+    nested = payload.get("input")
+    return nested if isinstance(nested, dict) else payload
+
+
 def video_workload(payload: dict) -> float:
-    """Estimate relative video-generation cost for Vast autoscaling."""
-    width = int(payload.get("width", 832))
-    height = int(payload.get("height", 480))
-    num_frames = int(payload.get("num_frames", 93))
+    """Estimate relative LongCat cost for Vast autoscaling."""
+    job = _job(payload)
+    width = int(job.get("width", 832))
+    height = int(job.get("height", 480))
+    num_frames = int(job.get("num_frames", 93))
+    segments = int(job.get("continuation_segments", 1))
 
     baseline = 832 * 480 * 93
-    return max(1.0, (width * height * num_frames) / baseline)
+    return max(1.0, (width * height * num_frames * max(1, segments)) / baseline)
 
 
 worker_config = WorkerConfig(
@@ -31,12 +38,11 @@ worker_config = WorkerConfig(
         ),
     ],
     log_action_config=LogActionConfig(
-        on_load=[
-            "LONGCAT_READY",
-        ],
+        on_load=["LONGCAT_READY"],
         on_error=[
             "LONGCAT_FATAL",
             "Traceback (most recent call last):",
+            "CUDA out of memory",
         ],
         on_info=[
             "LONGCAT_LOADING",
