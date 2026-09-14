@@ -11,6 +11,7 @@ export MODEL_SERVER_PORT="${MODEL_SERVER_PORT:-18000}"
 export PYWORKER_DIR="${PYWORKER_DIR:-/workspace/longcat-vast-worker}"
 export LONGCAT_REPO_DIR="${LONGCAT_REPO_DIR:-/workspace/LongCat-Video}"
 export HF_HOME="${HF_HOME:-/workspace/hf-cache}"
+export VENV_DIR="${VENV_DIR:-/workspace/longcat-venv}"
 export PYTHONPATH="${LONGCAT_REPO_DIR}:${PYTHONPATH:-}"
 
 mkdir -p /workspace/models /workspace/hf-cache /var/log/longcat
@@ -19,10 +20,19 @@ mkdir -p /workspace/models /workspace/hf-cache /var/log/longcat
 # and may not include python, pip, git, curl or ffmpeg.
 apt-get update
 apt-get install -y --no-install-recommends \
-  python3.10 python3.10-dev python3-pip python-is-python3 \
+  python3.10 python3.10-dev python3.10-venv python3-pip python-is-python3 \
   git curl ca-certificates ffmpeg build-essential ninja-build \
   libgl1 libglib2.0-0
 rm -rf /var/lib/apt/lists/*
+
+# Keep all Python packages out of Ubuntu's system Python. This avoids conflicts with
+# distro-installed packages such as blinker and makes worker restarts reproducible.
+if [ ! -x "${VENV_DIR}/bin/python" ]; then
+  rm -rf "${VENV_DIR}"
+  python3.10 -m venv "${VENV_DIR}"
+fi
+# shellcheck disable=SC1090
+source "${VENV_DIR}/bin/activate"
 
 python -m pip install --upgrade pip setuptools wheel packaging ninja psutil
 
