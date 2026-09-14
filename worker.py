@@ -1,6 +1,6 @@
 import os
 
-from vastai import HandlerConfig, LogActionConfig, Worker, WorkerConfig
+from vastai import BenchmarkConfig, HandlerConfig, LogActionConfig, Worker, WorkerConfig
 
 
 MODEL_SERVER_URL = os.getenv("MODEL_SERVER_URL", "http://127.0.0.1")
@@ -35,6 +35,15 @@ worker_config = WorkerConfig(
             allow_parallel_requests=False,
             max_queue_time=1800.0,
             workload_calculator=video_workload,
+            # Vast 1.x requires exactly one handler to provide BenchmarkConfig.
+            # Use the model server's cheap health action so worker startup does not
+            # spend GPU time generating a benchmark video.
+            benchmark_config=BenchmarkConfig(
+                dataset=[{"input": {"action": "health"}}],
+                runs=1,
+                concurrency=1,
+                do_warmup=False,
+            ),
         ),
     ],
     log_action_config=LogActionConfig(
